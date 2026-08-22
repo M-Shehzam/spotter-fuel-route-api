@@ -127,9 +127,22 @@ def test_a_payload_survives_a_pickle_round_trip(stations_loaded, osrm):
 # --------------------------------------------------------------------------
 
 
-def test_the_process_falls_back_to_an_in_process_cache(settings):
-    """A fresh clone must run with no Redis at all."""
-    assert "locmem" in settings.CACHES["default"]["BACKEND"].lower()
+def test_the_process_falls_back_to_an_in_process_cache(monkeypatch):
+    """A fresh clone must run with no Redis at all.
+
+    Reloads the settings with REDIS_URL absent rather than reading the live
+    ones, so the result does not depend on whether a Redis happens to be
+    configured in the environment running the suite.
+    """
+    import importlib
+
+    monkeypatch.delenv("REDIS_URL", raising=False)
+    module = importlib.reload(importlib.import_module("config.settings"))
+
+    try:
+        assert "locmem" in module.CACHES["default"]["BACKEND"].lower()
+    finally:
+        importlib.reload(module)
 
 
 def test_redis_is_used_when_it_is_configured(monkeypatch):

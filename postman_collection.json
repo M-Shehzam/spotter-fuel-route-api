@@ -1,0 +1,744 @@
+{
+  "info": {
+    "name": "Spotter Fuel Route API",
+    "description": "Plans a route between two places in the USA and costs its fuel for a truck with a 500 mile range at 10 miles per gallon.\n\nRun the requests in order. The first call to a journey reaches OSRM once; the second is served from cache and reaches nothing.\n\nSet base_url if the service is not on http://127.0.0.1:8000.\n\nAuthor: Muhammad Shehzam",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1 \u00b7 Demo sequence",
+      "description": "The order used in the walkthrough video.",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/health/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "health"
+              ]
+            },
+            "description": "Confirms the service is up and reports how many truckstops loaded, plus which database and cache backend the process resolved to."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('service is healthy', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('price file is loaded', () => pm.expect(b.checks.stations_loaded).to.eql(6626));",
+                  "pm.test('tank is 50 gallons', () => pm.expect(b.vehicle.tank_gallons).to.eql(50));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dallas to Chicago (cold)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/route/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "route"
+              ]
+            },
+            "description": "First call for this journey. Reaches OSRM exactly once. Note meta.external_api_calls and meta.compute_ms, and open meta.map_url in a browser.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start\": \"Dallas, TX\",\n  \"finish\": \"Chicago, IL\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('exactly one external call', () => pm.expect(b.meta.external_api_calls).to.eql(1));",
+                  "pm.test('not from cache', () => pm.expect(b.meta.cached).to.be.false);",
+                  "pm.test('gallons equal distance over 10', () =>",
+                  "  pm.expect(b.fuel.total_gallons).to.be.closeTo(b.route.total_distance_miles / 10, 0.01));",
+                  "pm.test('several stops', () => pm.expect(b.fuel.stops_count).to.be.above(1));",
+                  "pm.test('beats the corridor average', () => pm.expect(b.fuel.savings_usd).to.be.above(0));",
+                  "pm.collectionVariables.set('map_url', b.meta.map_url);",
+                  "console.log('Map: ' + pm.collectionVariables.get('base_url') + b.meta.map_url);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dallas to Chicago (cached)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/route/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "route"
+              ]
+            },
+            "description": "The same journey again. Served from cache, so no external call and single-digit milliseconds.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start\": \"Dallas, TX\",\n  \"finish\": \"Chicago, IL\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('served from cache', () => pm.expect(b.meta.cached).to.be.true);",
+                  "pm.test('no external calls', () => pm.expect(b.meta.external_api_calls).to.eql(0));",
+                  "pm.test('under 50 ms', () => pm.expect(pm.response.responseTime).to.be.below(50));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Same journey, worded differently",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/route/?start=dallas&finish=Chicago, Illinois",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "route"
+              ],
+              "query": [
+                {
+                  "key": "start",
+                  "value": "dallas"
+                },
+                {
+                  "key": "finish",
+                  "value": "Chicago, Illinois"
+                }
+              ]
+            },
+            "description": "Caching keys on resolved coordinates, not the words typed, so this shares the answer above."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('shares the cached answer', () => pm.expect(b.meta.cached).to.be.true);",
+                  "pm.test('no external calls', () => pm.expect(b.meta.external_api_calls).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Los Angeles to New York",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/route/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "route"
+              ]
+            },
+            "description": "2,793 miles, so the tank forces many fuel-ups. 33,643 shape points thin to 1,393 before matching.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start\": \"Los Angeles, CA\",\n  \"finish\": \"New York, NY\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('transcontinental', () => pm.expect(b.route.total_distance_miles).to.be.above(2500));",
+                  "pm.test('many stops', () => pm.expect(b.fuel.stops_count).to.be.above(8));",
+                  "pm.test('no leg exceeds the tank', () => {",
+                  "  const marks = b.fuel_stops.map(s => s.distance_from_start_miles);",
+                  "  marks.forEach((m, i) => { if (i) pm.expect(m - marks[i-1]).to.be.at.most(500); });",
+                  "});",
+                  "pm.test('geometry was simplified', () =>",
+                  "  pm.expect(b.route.simplified_points).to.be.below(b.route.shape_points / 2));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2 \u00b7 Input handling",
+      "description": "Endpoints resolve offline, so none of these cost an external call.",
+      "item": [
+        {
+          "name": "State spelled out",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/route/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "route"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start\": \"Dallas, Texas\",\n  \"finish\": \"Chicago, Illinois\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bare city names",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/route/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "route"
+              ]
+            },
+            "description": "Resolves to the largest place of that name.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start\": \"Phoenix\",\n  \"finish\": \"Denver\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "No comma",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/route/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "route"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start\": \"Tomah WI\",\n  \"finish\": \"Big Cabin OK\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Coordinates",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/route/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "route"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start\": \"32.7767,-96.7970\",\n  \"finish\": \"41.8781,-87.6298\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Narrow corridor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/route/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "route"
+              ]
+            },
+            "description": "Only truckstops within 3 miles of the road qualify, which usually costs a little more.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start\": \"Dallas, TX\",\n  \"finish\": \"Chicago, IL\",\n  \"max_detour_miles\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3 \u00b7 Failures",
+      "description": "Every failure names itself rather than returning a generic error.",
+      "item": [
+        {
+          "name": "Unknown place",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/route/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "route"
+              ]
+            },
+            "description": "400",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start\": \"Nowhereville, ZZ\",\n  \"finish\": \"Chicago, IL\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('names the problem', () => pm.expect(pm.response.json().error).to.eql('location_not_found'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Outside the USA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/route/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "route"
+              ]
+            },
+            "description": "London's coordinates. The brief scopes this to the United States.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start\": \"51.5074,-0.1278\",\n  \"finish\": \"Chicago, IL\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('says why', () => pm.expect(pm.response.json().detail).to.include('outside the USA'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start equals finish",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/route/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "route"
+              ]
+            },
+            "description": "400",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start\": \"Dallas, TX\",\n  \"finish\": \"Dallas, TX\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Missing finish",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/route/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "route"
+              ]
+            },
+            "description": "400",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start\": \"Dallas, TX\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4 \u00b7 The price data",
+      "item": [
+        {
+          "name": "Cheapest in Texas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/stations/?state=TX&ordering=retail_price&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stations"
+              ],
+              "query": [
+                {
+                  "key": "state",
+                  "value": "TX"
+                },
+                {
+                  "key": "ordering",
+                  "value": "retail_price"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('all Texan', () => b.results.forEach(r => pm.expect(r.state).to.eql('TX')));",
+                  "pm.test('cheapest first', () => {",
+                  "  const p = b.results.map(r => parseFloat(r.retail_price));",
+                  "  pm.expect(p).to.eql(p.slice().sort((a,b) => a-b));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search by brand",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/stations/?search=PILOT&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stations"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "PILOT"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "price_sample_count shows how many observations the average came from."
+          },
+          "response": []
+        },
+        {
+          "name": "No Canadian rows survive",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/stations/?state=ON&limit=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stations"
+              ],
+              "query": [
+                {
+                  "key": "state",
+                  "value": "ON"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "620 rows were dropped at load time."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('none', () => pm.expect(pm.response.json().count).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

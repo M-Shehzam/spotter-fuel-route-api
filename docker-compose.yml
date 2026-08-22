@@ -1,0 +1,53 @@
+# Spotter fuel route API
+# Author: Muhammad Shehzam
+#
+#   docker compose up --build
+#   open http://localhost:8000/api/docs/
+#
+# Brings up PostgreSQL and Redis alongside the service. Running the app on its
+# own without either still works: it falls back to SQLite and an in-process
+# cache.
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: fuelroute
+      POSTGRES_PASSWORD: fuelroute
+      POSTGRES_DB: fuelroute
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fuelroute"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgres://fuelroute:fuelroute@db:5432/fuelroute
+      REDIS_URL: redis://redis:6379/0
+      DEBUG: "False"
+      SECRET_KEY: change-me-before-any-real-deployment
+      ALLOWED_HOSTS: "*"
+      WARM_INDEXES_ON_START: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:

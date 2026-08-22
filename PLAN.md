@@ -36,14 +36,14 @@ Facts established from the file:
 - 8,151 rows → **6,738 unique** truckstops (by OPIS ID)
 - 4,275 unique city+state pairs
 - 57 "states" — 9 are **Canadian provinces** (AB, BC, MB, NB, NS, ON, QC, SK, YT). The brief says USA, so 620 rows get dropped → **7,531 US rows / 6,626 US stations**
-- 597 stations carry **multiple price observations** (same station, same rack ID, no date column). Spread averages $0.10, peaks at $0.90 → these are readings over time. We take the **mean** as the expected price and record `price_sample_count`. Using the min would make the optimizer look cheaper than reality.
+- 487 stations carry **multiple price observations** (same station, same rack ID, no date column). Spread averages $0.10, peaks at $0.90 → these are readings over time. We take the **mean** as the expected price and record `price_sample_count`. Using the min would make the optimizer look cheaper than reality.
 - Addresses are highway-exit descriptors (`"I-44, EXIT 283 & US-69"`), not street addresses. Standard geocoders handle these badly — which drives the geocoding design below.
 
 ## 3. Geocoding — hybrid, resolved at build time
 
 You picked hybrid. I'm moving the refinement pass to **build time** rather than request time, because refining during a request would add external calls and break requirement #10.
 
-**Stage 1 — baseline (fast, total coverage).** Download the free GeoNames US places dataset once, build a `(city, state) → lat/lon` index, join it to the CSV. Runs in seconds, no API key, no rate limit, 100% coverage, and a reviewer who clones the repo gets identical output. Precision: city centroid, ~1–3 mi error — negligible against a 500-mile tank.
+**Stage 1 — baseline (fast, total coverage).** Download the free GeoNames US gazetteer once (71 MB zipped, 307 MB unpacked), build a `(city, state) → lat/lon` index, join it to the CSV. Runs in seconds, no API key, no rate limit, 100% coverage, and a reviewer who clones the repo gets identical output. Precision: city centroid, ~1–3 mi error — negligible against a 500-mile tank.
 
 **Stage 2 — refinement (accuracy, additive).** A separate management command upgrades coordinates to true POI level by querying the **Overpass API** for `amenity=fuel` / `highway services` nodes per state bounding box, then fuzzy-matching on brand name + city. That's ~50 bulk queries instead of 6,738 individual geocodes, so it respects usage policy and finishes in minutes. Each station records `geocode_precision` = `city` | `poi`.
 
@@ -93,7 +93,7 @@ This is the algorithmic centrepiece and the part the job description is really t
 
 > At each station, look ahead within range. If a cheaper station is reachable, buy *just enough* to reach the nearest cheaper one. Otherwise fill the tank completely and drive to the cheapest station in range.
 
-Provably optimal, `O(n)` with a monotonic deque. Infeasible routes (a >500 mi gap with no truckstop) return `feasible: false` with the offending gap named, rather than a stack trace.
+Provably optimal. A monotonic stack gives the nearest cheaper stop ahead in linear time, and a sparse table gives the cheapest stop within range in constant time, so building a plan costs `O(n log n)`. Infeasible routes (a >500 mi gap with no truckstop) return `feasible: false` with the offending gap named, rather than a stack trace.
 
 We also compute a **naive baseline** — the same trip fuelled at the corridor's average price — so the response can report actual dollars saved.
 
@@ -149,7 +149,7 @@ Each phase ends in a working, committed state.
 | **P1** | Data pipeline: clean CSV, filter Canada, dedupe by mean price, GeoNames geocode, load command | 1.5 h |
 | **P2** | OSRM provider: httpx client, polyline decode, timeout/retry, error mapping | 45 m |
 | **P3** | Corridor matcher: grid index, vectorized haversine, distance-along-route | 1 h |
-| **P4** | Optimizer: greedy + deque, feasibility, naive baseline, unit tests vs brute force | 1.5 h |
+| **P4** | Optimizer: greedy, monotonic stack, sparse table, feasibility, naive baseline, optimality checked against a linear program | 1.5 h |
 | **P5** | API layer: serializers, views, validation, Leaflet map page | 1.5 h |
 | **P6** | Cache + perf: Redis/LocMem, warm-start, timing instrumentation | 45 m |
 | **P7** | Tests: optimizer, corridor, API with mocked OSRM, **assert exactly 1 call** | 1 h |
@@ -170,7 +170,7 @@ Timings are targets; the cue column says exactly what should be on screen.
 | 1:10–1:40 | Browser, the `map_url` from that response | The route line, numbered pins at each fuel stop. Hover one — name, price, gallons, cost. This is requirement #2, visually. |
 | 1:40–2:10 | Postman, **Send the same request again** | Second call is a cache hit: sub-15 ms, zero external calls. Then a long run — LA → New York — to show multiple fuel-ups over 2,800 miles. |
 | 2:10–2:50 | `apps/stations/` — the loader | The CSV ships with no coordinates. Explain the two-stage geocode: offline GeoNames baseline, Overpass POI refinement, both at build time so requests stay at one call. Mention dropping Canadian rows and averaging repeat price observations. |
-| 2:50–3:40 | `apps/routing/optimizer.py` | The centrepiece. State the model in one line — pays for every gallon, 50-gallon tank. Then the greedy rule: if a cheaper station is reachable, buy just enough to get there; otherwise fill up. Say it's provably optimal and `O(n)` with the deque. |
+| 2:50–3:40 | `apps/routing/optimizer.py` | The centrepiece. State the model in one line — pays for every gallon, 50-gallon tank. Then the greedy rule: if a cheaper station is reachable, buy just enough to get there; otherwise fill up. Say it is provably optimal, and that the suite proves it against a linear program rather than against another greedy. |
 | 3:40–4:10 | `apps/routing/corridor.py` | Why you don't test 6,600 stations against thousands of polyline points: grid bucketing plus vectorized haversine, under 10 ms. |
 | 4:10–4:40 | Terminal, `pytest -q` | Tests green. Highlight the one asserting the endpoint makes **exactly one** external call — the requirement, enforced in CI rather than promised. |
 | 4:40–5:00 | README, repo root | Postgres + Docker Compose, Swagger docs, Postman collection. Repo link. Thanks. |
@@ -190,3 +190,26 @@ Timings are targets; the cue column says exactly what should be on screen.
 4. Canadian rows dropped; the brief specifies USA.
 5. Prices are treated as diesel retail per gallon, as supplied.
 6. Detour distance to a stop is reported but not added to fuel burn — stops sit on interstate exits, so the error is under 1%.
+
+---
+
+## 11. Corrections made during the build
+
+The plan above is kept as written on 22 August. These are the places the build
+proved it wrong.
+
+| Planned | Actual |
+|---|---|
+| 597 stations with repeat prices | **487**. The higher figure counted any duplicate OPIS row; 487 is the count with differing prices, which is what matters |
+| GeoNames dump around 2 MB | **71 MB zipped, 307 MB unpacked** |
+| Optimizer `O(n)` with a monotonic deque | Monotonic stack plus a sparse table, `O(n log n)` overall |
+| Verify the optimizer against brute force | Brute force over stop subsets is **wrong**: it forbids carrying cheap fuel past a dearer stop, and the greedy beat it by $17. Replaced with a linear program |
+| Corridor matching under 20 ms | **13 to 32 ms**, with 23 to 40 ms for the whole local stage |
+| Detour measured against thinned points | Thinning left detour off by up to half the sample spacing. Survivors are now re-measured against the original geometry |
+| Refine geocoding at request time | Moved to build time. Refining during a request would have broken the one-call requirement |
+
+Two bugs in the optimizer were caught by tests rather than by reading the code:
+the reachable-destination check ran before the cheaper-stop check, and the
+first verification oracle was itself wrong.
+
+Author: Muhammad Shehzam

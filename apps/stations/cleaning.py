@@ -4,7 +4,7 @@ The raw file needs three decisions made explicitly, all of which are visible in
 the returned :class:`CleaningReport` so the loader can print what it did:
 
 1. It contains Canadian provinces. The brief scopes the problem to the USA, so
-   those rows are dropped rather than quietly geocoded into the wrong country.
+   those rows are dropped rather than geocoded into the wrong country.
 2. It repeats stations under one OPIS ID with differing prices and no date
    column. Those are read as observations over time and averaged. Taking the
    minimum instead would make the optimizer report a cost it cannot achieve.

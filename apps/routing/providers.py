@@ -1,14 +1,14 @@
 """Routing providers.
 
 The brief asks that the service lean on the external routing API as little as
-possible, so the contract here is deliberately narrow: one request yields the
+possible, so the contract here is narrow: one request yields the
 whole route geometry, and everything downstream (corridor search, stop
 selection) runs locally against that single response.
 
 OSRM's demo server is the default because it needs no API key, which keeps a
 fresh clone runnable without credentials. Public demo servers do go down, so a
 fallback provider can be named in the environment; it is consulted only after
-the primary has actually failed, leaving the healthy path at exactly one call.
+the primary has failed, leaving the healthy path at one call.
 """
 
 from __future__ import annotations
@@ -304,9 +304,9 @@ def get_provider(name: str | None = None) -> RoutingProvider:
 def fetch_route(start: Coordinate, finish: Coordinate) -> RouteResult:
     """Fetch a route, falling back to the standby provider only on failure.
 
-    A healthy request makes exactly one external call. The fallback fires only
-    when the primary is unreachable or broken, never to improve a result, so
-    the second call is a recovery path rather than routine behaviour.
+    A healthy request makes one external call. The fallback fires when the
+    primary is unreachable or broken, never to improve a result, so the second
+    call is recovery rather than routine.
     """
     primary = get_provider()
     try:

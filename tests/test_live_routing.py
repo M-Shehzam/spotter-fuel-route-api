@@ -1,7 +1,7 @@
 """Opt-in checks against the real routing API.
 
 Excluded from the default run so the suite stays fast and offline. Run them
-before recording a demo, to confirm the public server is actually up:
+before recording a demo, to confirm the public server is up:
 
     pytest -m live
 """

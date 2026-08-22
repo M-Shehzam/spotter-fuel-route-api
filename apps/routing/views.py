@@ -25,7 +25,7 @@ from apps.stations.models import Station
 class HealthView(APIView):
     """Liveness and readiness probe.
 
-    Reports which database and cache backend the process actually resolved to,
+    Reports which database and cache backend the process resolved to,
     so a misconfigured environment is visible without reading the settings.
     """
 

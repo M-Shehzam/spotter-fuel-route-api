@@ -1,6 +1,6 @@
 """Vectorized distance helpers.
 
-Two formulas, chosen deliberately:
+Two formulas, each chosen for a reason:
 
 ``haversine_miles`` is exact over any separation and is used for measuring the
 route itself, where errors accumulate over thousands of segments.

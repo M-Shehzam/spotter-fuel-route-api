@@ -6,7 +6,7 @@ The truck holds 500 miles of range (50 gallons at 10 mpg) and pays for every
 gallon it burns, so the gallons bought over a trip equal its distance divided
 by the mileage, exactly as the brief describes. Before departing it fills at
 the cheapest truckstop within a short radius of the origin, which is what a
-driver actually does; the opening leg is therefore charged at that stop's
+driver does; the opening leg is charged at that stop's
 price. From there the plan must never ask the truck to cover more than a tank
 between purchases, nor to finish more than a tank past its last one.
 

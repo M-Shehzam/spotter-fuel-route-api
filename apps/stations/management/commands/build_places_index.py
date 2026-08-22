@@ -116,7 +116,7 @@ class Command(BaseCommand):
                     if existing is None or population > existing[2]:
                         collected[key] = (latitude, longitude, population)
 
-        # Station cities are resolved through the very index that geocoded the
+        # Station cities are resolved through the same index that geocoded the
         # stations, so anything reachable only by an alternate spelling or the
         # prefix fallback still lands here under the spelling the file uses.
         recovered = 0

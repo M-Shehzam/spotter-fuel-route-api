@@ -1,4 +1,4 @@
-"""P4 gate: the fuelling plan is genuinely the cheapest one available.
+"""P4 gate: the fuelling plan is the cheapest one available.
 
 The greedy rule is checked against an exhaustive search. For a small number of
 stops every subset can be priced directly, so the two must agree on every
@@ -61,7 +61,7 @@ def cheapest_by_linear_program(pairs, total_miles, tank=TANK_RANGE, radius=ORIGI
 
     This is the independent check the greedy is measured against. An earlier
     version of this oracle priced each leg at the stop that began it, which
-    quietly forbids carrying cheap fuel past a dearer stop, and so reported
+    forbids carrying cheap fuel past a dearer stop, and so reported
     optima the greedy could beat.
     """
     ordered = sorted(pairs)

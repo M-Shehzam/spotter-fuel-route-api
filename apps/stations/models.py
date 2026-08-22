@@ -35,7 +35,7 @@ class Station(models.Model):
     OPIS and rack ID and carries no observation date, so those rows are read as
     samples over time. We store their mean as the expected price and keep the
     spread visible via ``price_sample_count``, ``price_min`` and ``price_max``
-    rather than silently collapsing it.
+    rather than collapsing it out of sight.
     """
 
     opis_id = models.IntegerField(unique=True, db_index=True)

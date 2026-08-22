@@ -35,8 +35,8 @@ from apps.routing.providers import RouteResult
 
 logger = logging.getLogger(__name__)
 
-# Half a degree of latitude is about 34.5 miles, comfortably wider than the
-# default corridor, so a single ring of neighbouring cells always suffices.
+# Half a degree of latitude is about 34.5 miles, wider than the default
+# corridor, so one ring of neighbouring cells covers it.
 CELL_DEGREES = 0.5
 
 # Route thinning target. Two miles is far below the corridor width, so the
@@ -227,9 +227,8 @@ def find_candidates(
     detour_limit = (
         settings.MAX_DETOUR_MILES if max_detour_miles is None else float(max_detour_miles)
     )
-    # An index with no stations is falsy, so this must test for None rather
-    # than truthiness or an explicitly empty index would silently hit the
-    # database.
+    # An index holding no stations is falsy, so this tests for None. Testing
+    # truthiness would send an empty index to the database instead.
     if index is None:
         index = get_station_index()
     if len(index) == 0 or route.sample_count == 0:

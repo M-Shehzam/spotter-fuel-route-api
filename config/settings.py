@@ -175,7 +175,12 @@ ORIGIN_FUEL_RADIUS_MILES = env_float("ORIGIN_FUEL_RADIUS_MILES", 30.0)
 # clone runnable without credentials.
 ROUTING_PROVIDER = os.getenv("ROUTING_PROVIDER", "osrm")
 OSRM_BASE_URL = os.getenv("OSRM_BASE_URL", "https://router.project-osrm.org")
+VALHALLA_BASE_URL = os.getenv("VALHALLA_BASE_URL", "https://valhalla1.openstreetmap.de")
 ROUTING_TIMEOUT_SECONDS = env_float("ROUTING_TIMEOUT_SECONDS", 15.0)
+
+# Consulted only when the primary provider is unreachable, so the healthy path
+# stays at one external call. Blank disables the fallback entirely.
+ROUTING_FALLBACK_PROVIDER = os.getenv("ROUTING_FALLBACK_PROVIDER", "valhalla")
 
 STATIONS_CSV = BASE_DIR / "data" / "fuel-prices-for-be-assessment.csv"
 STATIONS_GEOCODED_CSV = BASE_DIR / "data" / "stations_geocoded.csv"

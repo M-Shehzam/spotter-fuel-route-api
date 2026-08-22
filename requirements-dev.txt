@@ -1,7 +1,8 @@
 -r requirements.txt
 pytest==9.1.1
 pytest-django==4.14.0
+pytest-cov==7.1.0
 respx==0.23.1
-# Test-only. The optimizer is checked against a linear program, which is an
-# independent formulation of the same problem rather than a second greedy.
+# Test-only. The optimizer is checked against a linear program, which states
+# the same problem independently rather than repeating the greedy.
 scipy==1.18.1

@@ -55,6 +55,12 @@ class Command(BaseCommand):
             default=settings.BASE_DIR / "data" / "geonames_raw" / "US.txt",
         )
         parser.add_argument("--output", type=Path, default=settings.PLACES_CSV)
+        parser.add_argument(
+            "--stations",
+            type=Path,
+            default=settings.STATIONS_GEOCODED_CSV,
+            help="Geocoded station file whose cities must all resolve.",
+        )
 
     def handle(self, *args, **options):
         geonames: Path = options["geonames"]
@@ -69,7 +75,7 @@ class Command(BaseCommand):
                 "  unzip -o data/geonames_raw/US.zip -d data/geonames_raw"
             )
 
-        wanted = self._station_cities()
+        wanted = self._station_cities(options["stations"])
         self.stdout.write(f"  {len(wanted):,} distinct truckstop cities must resolve")
 
         collected: dict[tuple[str, str], tuple[float, float, int]] = {}
@@ -156,9 +162,8 @@ class Command(BaseCommand):
         )
         self.stdout.write(self.style.SUCCESS(f"Wrote {output} ({size_mb:.1f} MB)"))
 
-    def _station_cities(self) -> set[tuple[str, str]]:
+    def _station_cities(self, source: Path) -> set[tuple[str, str]]:
         """Cities that must resolve because a truckstop sits in them."""
-        source = settings.STATIONS_GEOCODED_CSV
         if not source.exists():
             raise CommandError(
                 f"{source} not found. Run build_station_data first."

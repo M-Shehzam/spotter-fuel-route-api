@@ -49,6 +49,12 @@ class Command(BaseCommand):
             help="Path to the unpacked GeoNames US dump.",
         )
         parser.add_argument(
+            "--source",
+            type=Path,
+            default=settings.STATIONS_CSV,
+            help="The supplied price file to clean.",
+        )
+        parser.add_argument(
             "--output",
             type=Path,
             default=settings.STATIONS_GEOCODED_CSV,
@@ -56,7 +62,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        source: Path = settings.STATIONS_CSV
+        source: Path = options["source"]
         geonames: Path = options["geonames"]
         output: Path = options["output"]
 

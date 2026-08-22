@@ -184,7 +184,7 @@ ROUTING_FALLBACK_PROVIDER = os.getenv("ROUTING_FALLBACK_PROVIDER", "valhalla")
 
 STATIONS_CSV = BASE_DIR / "data" / "fuel-prices-for-be-assessment.csv"
 STATIONS_GEOCODED_CSV = BASE_DIR / "data" / "stations_geocoded.csv"
-GEONAMES_CACHE = BASE_DIR / "data" / "us_cities.csv"
+PLACES_CSV = BASE_DIR / "data" / "us_places.csv"
 
 # --------------------------------------------------------------------------
 # I18N / static

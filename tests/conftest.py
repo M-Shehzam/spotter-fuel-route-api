@@ -1,6 +1,74 @@
+import httpx
 import pytest
+import respx
 from django.conf import settings
+from django.core.cache import cache
 from django.core.management import call_command
+
+from apps.routing import polyline
+
+
+@pytest.fixture(autouse=True)
+def clean_cache():
+    """Route results are cached, so tests must not inherit each other's."""
+    cache.clear()
+    yield
+    cache.clear()
+
+
+@pytest.fixture(autouse=True)
+def fresh_indexes():
+    """Station and place indexes are process-wide singletons."""
+    from apps.routing.corridor import reset_station_index
+    from apps.routing.providers import reset_client
+    from apps.routing.resolver import reset_place_index
+
+    reset_station_index()
+    reset_place_index()
+    reset_client()
+    yield
+    reset_station_index()
+    reset_place_index()
+    reset_client()
+
+
+@pytest.fixture
+def osrm():
+    """Mock OSRM returning a plausible Dallas-to-Chicago route.
+
+    Geometry runs through Oklahoma, Missouri and Illinois so that genuine
+    loaded truckstops fall inside the corridor.
+    """
+    waypoints = [
+        (32.78306, -96.80667), (33.62, -96.60), (34.75, -96.40), (35.47, -96.20),
+        (36.15, -95.99), (37.09, -94.51), (38.35, -93.20), (38.63, -90.20),
+        (39.80, -89.65), (40.69, -89.59), (41.52, -88.08), (41.85003, -87.65005),
+    ]
+    dense = []
+    for (lat1, lon1), (lat2, lon2) in zip(waypoints, waypoints[1:]):
+        for step in range(120):
+            fraction = step / 120
+            dense.append((lat1 + (lat2 - lat1) * fraction, lon1 + (lon2 - lon1) * fraction))
+    dense.append(waypoints[-1])
+
+    body = {
+        "code": "Ok",
+        "routes": [
+            {
+                "geometry": polyline.encode(dense, 6),
+                "distance": 966.29 * 1609.344,
+                "duration": 17.09 * 3600,
+                "legs": [],
+            }
+        ],
+        "waypoints": [],
+    }
+
+    with respx.mock(assert_all_called=False) as router:
+        route = router.get(url__startswith="https://router.project-osrm.org/").mock(
+            return_value=httpx.Response(200, json=body)
+        )
+        yield route
 
 
 @pytest.fixture(scope="session")

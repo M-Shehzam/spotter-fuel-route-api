@@ -1,0 +1,152 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ payload.request.start.resolved }} to {{ payload.request.finish.resolved }}</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --ink: #16202c; --muted: #5b6b7c; --line: #dde4ec;
+    --panel: #ffffff; --ground: #eef2f6; --accent: #1b6ac9; --good: #0f8a4a;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink); background: var(--ground); display: flex; height: 100vh;
+  }
+  #sidebar {
+    width: 380px; flex: 0 0 380px; background: var(--panel);
+    border-right: 1px solid var(--line); overflow-y: auto;
+  }
+  #map { flex: 1; height: 100%; }
+  header { padding: 18px 20px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 17px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .totals { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); }
+  .cell { background: var(--panel); padding: 14px 20px; }
+  .cell .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .cell .v { font-size: 20px; font-weight: 600; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .saving { color: var(--good); }
+  ol { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; gap: 12px; padding: 13px 20px; border-bottom: 1px solid var(--line); }
+  li:hover { background: #f6f9fc; cursor: pointer; }
+  .pin {
+    flex: 0 0 26px; height: 26px; border-radius: 50%; background: var(--accent);
+    color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center;
+  }
+  .name { font-weight: 600; font-size: 14px; }
+  .where, .nums { color: var(--muted); font-size: 12.5px; }
+  .nums { margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .warn { margin: 16px 20px; padding: 12px 14px; border-radius: 8px;
+          background: #fdf2f2; border: 1px solid #f3c9c9; color: #8a1f1f; font-size: 13px; }
+  footer { padding: 14px 20px; color: var(--muted); font-size: 12px; }
+  @media (max-width: 780px) {
+    body { flex-direction: column; }
+    #sidebar { width: 100%; flex: 0 0 auto; max-height: 45vh; border-right: 0; border-bottom: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <header>
+    <h1>{{ payload.request.start.resolved }} &rarr; {{ payload.request.finish.resolved }}</h1>
+    <div class="sub">
+      {{ payload.route.total_distance_miles }} mi &middot;
+      {{ payload.route.total_duration_hours }} h driving &middot;
+      {{ payload.fuel.stops_count }} fuel stop{{ payload.fuel.stops_count|pluralize }}
+    </div>
+  </header>
+
+  {% if payload.fuel.feasible %}
+  <div class="totals">
+    <div class="cell"><div class="k">Total fuel</div><div class="v">${{ payload.fuel.total_cost_usd }}</div></div>
+    <div class="cell"><div class="k">Gallons</div><div class="v">{{ payload.fuel.total_gallons }}</div></div>
+    <div class="cell"><div class="k">Average price</div><div class="v">${{ payload.fuel.average_price_per_gallon }}</div></div>
+    <div class="cell"><div class="k">Saved vs average</div><div class="v saving">${{ payload.fuel.savings_usd }}</div></div>
+  </div>
+  {% else %}
+  <div class="warn">{{ payload.fuel.infeasible_reason }}</div>
+  {% endif %}
+
+  <ol id="stops">
+    {% for stop in payload.fuel_stops %}
+    <li data-lat="{{ stop.latitude }}" data-lon="{{ stop.longitude }}" data-seq="{{ stop.sequence }}">
+      <span class="pin">{{ stop.sequence }}</span>
+      <span>
+        <span class="name">{{ stop.name }}</span>
+        <div class="where">{{ stop.city }}, {{ stop.state }} &middot; mile {{ stop.distance_from_start_miles }}</div>
+        <div class="nums">
+          ${{ stop.price_per_gallon }}/gal &middot; {{ stop.gallons }} gal &middot;
+          <strong>${{ stop.cost_usd }}</strong>
+          {% if stop.detour_miles %} &middot; {{ stop.detour_miles }} mi off route{% endif %}
+        </div>
+      </span>
+    </li>
+    {% endfor %}
+  </ol>
+
+  <footer>
+    Routed by {{ payload.route.provider }} &middot;
+    {{ payload.meta.external_api_calls }} external call{{ payload.meta.external_api_calls|pluralize }} &middot;
+    {{ payload.meta.candidates_considered }} truckstops considered
+  </footer>
+</div>
+<div id="map"></div>
+
+{{ payload.route.geometry.coordinates|json_script:"geometry-data" }}
+<script>
+(function () {
+  const geometry = JSON.parse(document.getElementById('geometry-data').textContent);
+
+  const map = L.map('map', { zoomControl: true });
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  // GeoJSON is longitude first; Leaflet wants latitude first.
+  const line = geometry.map(function (pair) { return [pair[1], pair[0]]; });
+  const path = L.polyline(line, { color: '#1b6ac9', weight: 4, opacity: 0.85 }).addTo(map);
+
+  const endpointIcon = function (colour) {
+    return L.divIcon({
+      className: '',
+      html: '<div style="width:14px;height:14px;border-radius:50%;background:' + colour +
+            ';border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3)"></div>',
+      iconSize: [14, 14], iconAnchor: [7, 7]
+    });
+  };
+  if (line.length) {
+    L.marker(line[0], { icon: endpointIcon('#0f8a4a') }).addTo(map).bindPopup('Start');
+    L.marker(line[line.length - 1], { icon: endpointIcon('#c62828') }).addTo(map).bindPopup('Finish');
+  }
+
+  const markers = {};
+  document.querySelectorAll('#stops li').forEach(function (row) {
+    const seq = row.dataset.seq;
+    const lat = parseFloat(row.dataset.lat), lon = parseFloat(row.dataset.lon);
+    const icon = L.divIcon({
+      className: '',
+      html: '<div style="width:26px;height:26px;border-radius:50%;background:#1b6ac9;color:#fff;' +
+            'font:700 12px/26px -apple-system,sans-serif;text-align:center;border:2px solid #fff;' +
+            'box-shadow:0 1px 4px rgba(0,0,0,.4)">' + seq + '</div>',
+      iconSize: [26, 26], iconAnchor: [13, 13]
+    });
+    const marker = L.marker([lat, lon], { icon: icon }).addTo(map);
+    marker.bindPopup(row.querySelector('.name').textContent + '<br>' +
+                     row.querySelector('.nums').textContent.trim());
+    markers[seq] = marker;
+    row.addEventListener('click', function () {
+      map.setView([lat, lon], 10);
+      marker.openPopup();
+    });
+  });
+
+  map.fitBounds(path.getBounds(), { padding: [30, 30] });
+})();
+</script>
+</body>
+</html>

@@ -110,6 +110,25 @@ Three stations stay unresolved: `Pueblo Of Acoma, NM`, `Crescent, PA` and
 `Corinth, ME`. They load with `geocode_precision: unknown` and never become
 candidates.
 
+### What I tried next, and dropped
+
+The plan called for a second pass sharpening those centroids into real
+forecourt positions by matching stations against OpenStreetMap fuel points
+through Overpass. I built it around store numbers, since "LOVES TRAVEL STOP
+#766" agreeing with a `Love's Travel Stop #766` on brand, number and state is
+hard to reach by accident.
+
+Overpass says otherwise. Of 477 named fuel points in Oklahoma, **none** carry a
+store number. The names are bare: `Love's`, `Pilot`, `7-Eleven`, with no `ref`
+tag either. That leaves brand and proximity, and a town with two Pilots then
+offers a coin flip. Guessing wrong moves a station further from the truth than
+the centroid it replaced.
+
+So the pass is gone rather than shipped at lower confidence. City centroids
+land one to three miles out, the corridor is ten miles wide, and every stop
+reports its own measured detour. Sharper coordinates would change no stop the
+optimizer picks.
+
 City-centroid error runs one to three miles. Against a 500 mile tank and a ten
 mile corridor that changes no decision.
 

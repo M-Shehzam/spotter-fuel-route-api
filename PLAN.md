@@ -154,7 +154,7 @@ Each phase ends in a working, committed state.
 | **P6** | Cache + perf: Redis/LocMem, warm-start, timing instrumentation | 45 m |
 | **P7** | Tests: optimizer, corridor, API with mocked OSRM, **assert exactly 1 call** | 1 h |
 | **P8** | Docker Compose, README (stop-slop pass), Postman collection, `.env.example` | 1 h |
-| **P9** | Overpass refinement pass (droppable) | 45 m |
+| **P9** | Overpass refinement pass (droppable) | Dropped, see §11 |
 | **P10** | GitHub push, Loom rehearsal + record | 1 h |
 
 Roughly 11 hours of build. Comfortable inside the remaining window.
@@ -207,6 +207,7 @@ proved it wrong.
 | Corridor matching under 20 ms | **13 to 32 ms**, with 23 to 40 ms for the whole local stage |
 | Detour measured against thinned points | Thinning left detour off by up to half the sample spacing. Survivors are now re-measured against the original geometry |
 | Refine geocoding at request time | Moved to build time. Refining during a request would have broken the one-call requirement |
+| P9 would sharpen coordinates to OSM fuel points | **Dropped.** OpenStreetMap carries no store numbers, so matching falls back to brand and proximity, which is a guess wherever a town holds two of a brand. City centroids already sit well inside a ten mile corridor |
 
 Two bugs in the optimizer were caught by tests rather than by reading the code:
 the reachable-destination check ran before the cheaper-stop check, and the

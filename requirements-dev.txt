@@ -2,3 +2,6 @@
 pytest==9.1.1
 pytest-django==4.14.0
 respx==0.23.1
+# Test-only. The optimizer is checked against a linear program, which is an
+# independent formulation of the same problem rather than a second greedy.
+scipy==1.18.1

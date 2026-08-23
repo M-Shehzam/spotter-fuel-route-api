@@ -188,7 +188,7 @@ pytest
 > percent coverage.
 
 While it runs, switch to `tests/test_p5_api.py` and highlight
-`test_a_successful_route_makes_exactly_one_external_call`.
+`test_planning_a_journey_makes_exactly_one_external_call`.
 
 > The one call requirement isn't a line in a README. It's asserted.
 

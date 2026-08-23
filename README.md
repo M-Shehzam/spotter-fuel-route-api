@@ -347,7 +347,7 @@ pytest --cov                # 94%
 
 Worth knowing about:
 
-- `test_a_successful_route_makes_exactly_one_external_call` asserts the brief's
+- `test_planning_a_journey_makes_exactly_one_external_call` asserts the brief's
   headline constraint rather than claiming it in prose.
 - `test_greedy_matches_the_linear_program_on_random_instances` checks
   optimality against an independent formulation.

@@ -29,7 +29,8 @@
               "path": [
                 "api",
                 "v1",
-                "health"
+                "health",
+                ""
               ]
             },
             "description": "Confirms the service is up and reports how many truckstops loaded, plus which database and cache backend the process resolved to."
@@ -68,7 +69,8 @@
               "path": [
                 "api",
                 "v1",
-                "route"
+                "route",
+                ""
               ]
             },
             "description": "First call for this journey. Reaches OSRM exactly once. Note meta.external_api_calls and meta.compute_ms, and open meta.map_url in a browser.",
@@ -122,7 +124,8 @@
               "path": [
                 "api",
                 "v1",
-                "route"
+                "route",
+                ""
               ]
             },
             "description": "The same journey again. Served from cache, so no external call and single-digit milliseconds.",
@@ -165,7 +168,8 @@
               "path": [
                 "api",
                 "v1",
-                "route"
+                "route",
+                ""
               ],
               "query": [
                 {
@@ -213,7 +217,8 @@
               "path": [
                 "api",
                 "v1",
-                "route"
+                "route",
+                ""
               ]
             },
             "description": "2,793 miles, so the tank forces many fuel-ups. 33,643 shape points thin to 1,393 before matching.",
@@ -272,7 +277,8 @@
               "path": [
                 "api",
                 "v1",
-                "route"
+                "route",
+                ""
               ]
             },
             "description": "",
@@ -306,7 +312,8 @@
               "path": [
                 "api",
                 "v1",
-                "route"
+                "route",
+                ""
               ]
             },
             "description": "Resolves to the largest place of that name.",
@@ -340,7 +347,8 @@
               "path": [
                 "api",
                 "v1",
-                "route"
+                "route",
+                ""
               ]
             },
             "description": "",
@@ -374,7 +382,8 @@
               "path": [
                 "api",
                 "v1",
-                "route"
+                "route",
+                ""
               ]
             },
             "description": "",
@@ -408,7 +417,8 @@
               "path": [
                 "api",
                 "v1",
-                "route"
+                "route",
+                ""
               ]
             },
             "description": "Only truckstops within 3 miles of the road qualify, which usually costs a little more.",
@@ -448,7 +458,8 @@
               "path": [
                 "api",
                 "v1",
-                "route"
+                "route",
+                ""
               ]
             },
             "description": "400",
@@ -494,7 +505,8 @@
               "path": [
                 "api",
                 "v1",
-                "route"
+                "route",
+                ""
               ]
             },
             "description": "London's coordinates. The brief scopes this to the United States.",
@@ -540,7 +552,8 @@
               "path": [
                 "api",
                 "v1",
-                "route"
+                "route",
+                ""
               ]
             },
             "description": "400",
@@ -585,7 +598,8 @@
               "path": [
                 "api",
                 "v1",
-                "route"
+                "route",
+                ""
               ]
             },
             "description": "400",
@@ -630,7 +644,8 @@
               "path": [
                 "api",
                 "v1",
-                "stations"
+                "stations",
+                ""
               ],
               "query": [
                 {
@@ -680,7 +695,8 @@
               "path": [
                 "api",
                 "v1",
-                "stations"
+                "stations",
+                ""
               ],
               "query": [
                 {
@@ -710,7 +726,8 @@
               "path": [
                 "api",
                 "v1",
-                "stations"
+                "stations",
+                ""
               ],
               "query": [
                 {

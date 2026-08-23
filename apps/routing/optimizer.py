@@ -19,7 +19,7 @@ it exactly:
     If somewhere cheaper is reachable, buy just enough fuel to get there.
     Otherwise fill up, and drive to the cheapest stop in range.
 
-The reasoning is a exchange argument. Fuel bought at the current price is only
+The reasoning is an exchange argument. Fuel bought at the current price is only
 worth carrying past a station that costs more, so when a cheaper station is
 within reach there is no gain in buying beyond what it takes to arrive there,
 and when there is not, every gallon the tank can hold is cheaper here than
